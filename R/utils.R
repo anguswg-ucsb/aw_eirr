@@ -241,9 +241,150 @@ rf_ricd <- function() {
 # 1 event in May lasting (2 days per event,  580 CFS per day = 2*580 CFS = 1160 CFS over 2 days)
 # 2 events in June (4 days per event, 400 CFS per day = 4*400 CFS = 1600 CFS over 4 days)
 
-# calculate RICD Management flows and boatalbe days under this scenario
-get_rf_ricd <- function(df) {
+get_rf_events <- function(df) {
   
+  # RICD rules
+  # 10 total days
+  # 1 event in May lasting (2 days per event,  580 CFS per day = 2*580 CFS = 1160 CFS over 2 days)
+  # 2 events in June (4 days per event, 400 CFS per day = 4*400 CFS = 1600 CFS over 4 days)
+  
+  df <- mgmt
+    
+  # df %>% names()
+  
+  # df %>% 
+  #   dplyr::mutate(
+  #     month = lubridate::month(datetime),
+  #     year  = lubridate::year(datetime),
+  #     day   = lubridate::day(datetime)
+  #   ) %>%
+  #   dplyr::filter(
+  #     year %in% c(2020, 2021, 2022)
+  #   ) %>%
+  #   dplyr::select(datetime, uid, flow, aug_flow) %>% 
+  #   tidyr::pivot_longer(cols = c(flow, aug_flow)) %>% 
+  #   ggplot2::ggplot() +
+  #   ggplot2::geom_line(ggplot2::aes(x = datetime, y = value, color = name)) +
+  #   ggplot2::facet_wrap(~uid)
+  
+  library(zoo)
+  df <- data.frame(
+    date = seq(from = as.Date("2022-01-01"), to = as.Date("2022-01-31"), by = "day"),
+    value = runif(31, 1, 10),
+    lower_threshold = rep(3, 31),
+    upper_threshold = rep(7, 31)
+  )
+  
+  # define window size
+  window_size <- 4
+  
+  # calculate threshold count for each 4-day period
+  df <- df %>%
+    # rowwise() %>%
+    dplyr::group_by(date) %>% 
+    mutate(
+      threshold_count = sum(zoo::rollapply(value, width = window_size, FUN = function(x) {
+        sum(x >= lower_threshold & x <= upper_threshold)
+        }, 
+        align = "right", fill = NA))
+      )
+  
+  # print the results
+  print(df)
+  # create example data frame
+  df <- data.frame(
+    date = seq(from = as.Date("2022-01-01"), to = as.Date("2022-01-31"), by = "day"),
+    value = runif(31, 1, 10)
+  )
+  
+  # define the threshold range
+  lower_threshold <- 2
+  upper_threshold <- 7
+  
+  # perform a rolling 4-day window and count the number of times the values are within the threshold range
+  window_size <- 4
+  df$count_threshold_range <- zoo::rollapply(
+    df$value, 
+    width = window_size, 
+    FUN = function(x) {
+      sum(x >= lower_threshold & x <= upper_threshold)
+      }, align = "right", fill = NA)
+  
+  # print the results
+  print(df)
+  
+  tmp = 
+    df %>%
+    dplyr::filter(
+      uid == "ROAEMMCO"
+    ) %>% 
+    dplyr::mutate(
+      month = lubridate::month(datetime),
+      year  = lubridate::year(datetime),
+      day   = lubridate::day(datetime)
+    ) %>%
+    dplyr::relocate(datetime, year, month, day) %>% 
+    dplyr::filter(
+      month == 5 | month == 6, year == 2002
+    ) %>%
+    dplyr::group_by(year) %>%
+    # dplyr::mutate(
+    #   
+    # )
+    dplyr::mutate(
+        event_flow = dplyr::case_when(
+          month == 5 ~ 580,
+          month == 6 ~ 400,
+          TRUE ~ 0
+        ),
+        total_flow = flow + event_flow 
+      ) %>% 
+    dplyr::select(datetime, year, month, day, uid, flow, mgmt_flow, aug_flow, event_flow, total_flow)
+  
+  
+  
+  min_threshold <- gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$min_threshold
+  max_threshold <- gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$max_threshold
+  
+  tmp$min_threshold <-  gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$min_threshold
+  tmp$max_threshold <-  gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$max_threshold
+  # 
+  # perform a rolling 4-day window and count the number of times the values are within the threshold range
+  # window_size <- 4
+  may <- tmp %>% dplyr::filter(month == 5)
+  
+  may$boat_count <- zoo::rollapply(
+                            may$total_flow, 
+                            width = 2, 
+                            FUN = function(x) {
+                              # sum(x >= min_threshold & x <= max_threshold)
+                              sum(x >= min_threshold & x <= max_threshold)
+                              }, 
+                            align = "right",
+                            fill  = NA
+                            )
+  
+  
+  june <- tmp %>% dplyr::filter(month == 6)
+  
+  june$boat_count <- zoo::rollapply(
+                              june$total_flow, 
+                              width = 4, 
+                              FUN = function(x) {
+                                # sum(x >= min_threshold & x <= max_threshold)
+                                sum(x >= min_threshold & x <= max_threshold)
+                              }, 
+                              align = "right",
+                              fill  = NA
+                            )
+  
+  
+  
+}
+
+# calculate RICD Management flows and boatable days under this scenario
+get_rf_ricd <- function(df) {
+  # df <- flow_df
   rf <-
     df %>% 
     dplyr::filter(river == "Roaring Fork") %>% 
@@ -259,8 +400,9 @@ get_rf_ricd <- function(df) {
         month == "apr" & day <= 14        ~ 230,
         month == "apr" & day >= 15        ~ 310,
         month == "may" & day <= 14        ~ 575,
-        month == "may" & day >= 15        ~ 1000,
-        month == "june"                   ~ 1000,
+        month == "may" & day >= 15     ~ 1000,
+        # month == "may" & day >= 15 | month == "jun" | month == "jul" & day <= 14 ~ 1000,
+        month == "jun"                   ~ 1000,
         month == "jul" & day <= 14        ~ 1000,
         month == "jul" & day >= 15        ~ 575,
         month %in% c("aug", "sep", "oct") ~ 310,
@@ -268,18 +410,22 @@ get_rf_ricd <- function(df) {
         TRUE                              ~ NA_real_
       ),
       is_mgmt = dplyr::case_when(
+        !is.na(mgmt_flow) & mgmt_flow > flow  ~ TRUE,
+        TRUE                                  ~ FALSE
+      ),
+      is_mgmt_period = dplyr::case_when(
         !is.na(mgmt_flow)  ~ TRUE,
         TRUE               ~ FALSE
       ),
-      mgmt_flow = dplyr::case_when(
-        is.na(mgmt_flow) ~ flow,
-        TRUE              ~ mgmt_flow
+      aug_flow = dplyr::case_when(
+        is_mgmt == TRUE   ~ mgmt_flow,
+        TRUE              ~ flow
       )
     ) %>% 
     dplyr::ungroup() %>% 
     dplyr::select(-year, -month, -day) %>% 
     get_boatable_days(
-      flow_col = "mgmt_flow",
+      flow_col = "aug_flow",
       boat_col = "boat_mgmt"
     )
   
@@ -902,6 +1048,87 @@ reaches <- function(reach = "all") {
   }
 }
 
+res_structures <- function() {
+  
+  # Reservoirs and WDIDs
+  res <- data.frame(
+                        structure  =  c('long_draw', 'chambers', 'joe_wright', 'peterson', 'barnes_meadow'),
+                        wdid       =  c("0303676", "0303679", "0303678", "0303677", "0303683")
+                      )
+  
+  return(res)
+  
+}
+res_structures()
+get_res_flows <- function(
+    gage_table = NULL,
+    structs    = NULL,
+    start_date = "1980-01-01",
+    end_date   = Sys.Date(),
+    api_key    = NULL
+    ) {
+  # gage_table = NULL
+  # wdid       = NULL
+  # # start_date = "1980-01-01"
+  # # end_date   = Sys.Date()
+  # start_date = "2015-01-01"
+  # end_date   = "2022-01-01"
+  # api_key    = NULL
+  # structs = res_structures()
+  
+  if(is.null(structs)) {
+    
+    structs = res_structures()
+      
+  }
+  
+  rel <- cdssr::get_structures_divrec_ts(
+    wdid          = structs$wdid,
+    wc_identifier = "release",
+    start_date    = start_date,
+    end_date      = end_date,
+    timescale     = "day"
+  ) %>% 
+    dplyr::select(wdid, date = datetime, release = data_value)
+  
+  div <- cdssr::get_structures_divrec_ts(
+    wdid          = structs$wdid,
+    wc_identifier = "diversion",
+    start_date    = start_date,
+    end_date      = end_date,
+    timescale     = "day"
+  ) %>% 
+    dplyr::select(wdid, date = datetime, diversion = data_value)
+  
+  
+  res <- 
+    rel %>% 
+    dplyr::left_join(
+      div,
+      by = c("wdid", "date")
+      ) %>% 
+    dplyr::left_join(
+      structs,
+      by = c("wdid")
+      ) %>% 
+    replace(is.na(.), 0) %>% 
+    dplyr::group_by(wdid) %>%
+    dplyr::arrange(date) %>%
+    dplyr::mutate(
+      dvolume = (diversion - release)        # dS = diversion - releases
+    ) %>%
+    dplyr::ungroup() %>% 
+    dplyr::relocate(structure, wdid, date, diversion, release, dvolume)
+  
+  # res %>% 
+  #   tidyr::pivot_wider(
+  #     id_cols     = c(tidyselect::matches("structure"), date),
+  #     names_from  = "structure",
+  #     names_glue  = "{structure}_{.value}",
+  #     values_from = c(diversion, release, dvolume),
+  #     values_fn   = mean
+  #   ) 
+}
 # get reservoir flows in daily CFS
 get_reservoir_flows <- function(end_date = Sys.Date()) {
   
