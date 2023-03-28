@@ -70,16 +70,16 @@ gage_tbl <- function() {
               NA
               ),
   min_threshold = c(
-    200, 200, 
-    200, # 200, 200,
-    100,
+    550, 450, 
+    450, # 200, 200,
+    200,
     700, 500, 1100, 700,1300,
     522.7273, 354.797, 170.1005
     ),
   max_threshold = c(
-    10000,1500,
-    2050, # 1400, 2700, # took the mean of these 2 values
-    1000,
+    4000,3000,
+    1700, # 1400, 2700, # took the mean of these 2 values
+    400,
     5000, 5000, 10000, 5000, 25000,
     1000000, 1000000, 1000000
   ),
@@ -248,7 +248,7 @@ get_rf_events <- function(df) {
   # 1 event in May lasting (2 days per event,  580 CFS per day = 2*580 CFS = 1160 CFS over 2 days)
   # 2 events in June (4 days per event, 400 CFS per day = 4*400 CFS = 1600 CFS over 4 days)
   
-  df <- mgmt
+  # df <- mgmt
     
   # df %>% names()
   
