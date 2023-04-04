@@ -11,18 +11,9 @@ source("R/get_gage_data.R")
 
 # flow_df <- readr::read_csv("data/streamflow/observed/boatable_flows.csv")
 
+# TODO: On the chopping block 
+
 gage_table <- gage_tbl()
-
-
-# *******************
-# ---- Arkanasas ----
-# *******************
-
-ark <- readxl::read_xlsx("data/streamflow/observed/Arkansas_flow_program.xlsx")
-
-# ***************
-# ---- Yampa ----
-# ***************
 
 # **********************
 # ---- Roaring Fork ----
@@ -127,3 +118,12 @@ rf_mgmt <- get_rf_ricd(df = flow_df)
 #   ggplot2::theme_bw() +
 #   ggplot2::facet_wrap(~uid)
 
+# *******************
+# ---- Arkanasas ----
+# *******************
+
+ark <- readxl::read_xlsx("data/streamflow/observed/Arkansas_flow_program.xlsx")
+
+# ***************
+# ---- Yampa ----
+# ***************
