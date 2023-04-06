@@ -31,6 +31,8 @@ ricd       <- rf_ricd()
 # calculate RICD Management flows and boatable days under this scenario
 rf_mgmt <- get_rf_ricd(df = flow_df)
 
+
+
 # ***************
 # ---- plots ----
 # ***************

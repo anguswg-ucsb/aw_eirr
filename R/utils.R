@@ -9,7 +9,24 @@
 #'
 #' @examples
 gage_tbl <- function() {
+  # Arkansas
+  # BADLOWCO 
+  # 07093775 
+  # BADGER CREEK, LOWER STATION, NEAR HOWARD, CO. 
+  # USGS 
+
+  # Arkansas
+  # TCCKTCCO 
+  # 7C 
+  # TEXAS CREEK NEAR TEXAS CREEK 
+  # UAWCD 
   
+  # River: Arkansas
+  # Abbrev: ARKPARCO
+  # USGS SITE ID: 07094500
+  # Description: ARKANSAS RIVER AT PARKDALE, CO
+  # Source: USGS
+
   dplyr::tibble(
    river = c(
             "Roaring Fork",
@@ -25,7 +42,10 @@ gage_tbl <- function() {
             "Yampa",
             "Cache La Poudre",
             "Cache La Poudre",
-            "Cache La Poudre"
+            "Cache La Poudre",
+            "Arkansas",
+            "Arkansas",
+            "Arkansas"
             ),
    reach = c(
      "Black Bridge to Veltus Park (Cemetery)", "Basalt to Carbondale",
@@ -34,24 +54,27 @@ gage_tbl <- function() {
      "Weller Lake to Difficult CG",
      'Yampa River Park to Transit Center', "Transit Center to Pump Station",
      'Little Yampa Canyon', "Cross Mountain Gorge - 85 Rd to Deer Lodge Park Rd", 'Deerlodge Park to Echo Park',
-     "Filter Plant",  "Poudre Whitewater Park", "Big South"
+     "Filter Plant",  "Poudre Whitewater Park", "Big South",    # Poudre
+     "BADGER CREEK, LOWER STATION, NEAR HOWARD, CO",            # Arkansas
+     "TEXAS CREEK NEAR TEXAS CREEK",
+     "ARKANSAS RIVER AT PARKDALE, CO"
      ),
    abbrev = c(
-     "ROAGLECO", "ROAEMMCO", 
-     NA, # NA, NA, 
-     "ROADIFCO",
-     "YAMSTECO", "YAMELKCO", "YAMCRACO", "YAMAYBCO",
-     "YAMDEECO", "CLAFTCCO", "CLAFORCO", "LAPLODCO"
+     "ROAGLECO", "ROAEMMCO", NA, "ROADIFCO",           # Roaring Fork
+     "YAMSTECO", "YAMELKCO", "YAMCRACO", "YAMAYBCO",   # Yampa
+     "YAMDEECO", "CLAFTCCO", "CLAFORCO", "LAPLODCO",   # Poudre
+     "BADLOWCO", "TCCKTCCO", "ARKPARCO"                # Arkansas
    ),
   desc = c(
-    "Roaring Fork River at Glenwood Springs, CO", "Roaring Fork near Emma, CO",
+    "Roaring Fork River at Glenwood Springs, CO", "Roaring Fork near Emma, CO", # Roaring Fork
     "Roaring Fork River Blw Maroon Creek Nr Aspen, CO", 
     # "Roaring Fork River Blw Maroon Creek Nr Aspen, CO",
     # "Roaring Fork River Blw Maroon Creek Nr Aspen, CO", 
     "Roaring Fork River Ab Difficult Cr Nr Aspen, CO",
-    "Yampa River at Steamboat Springs, CO", "Yampa River above Elkhead Creek near Hayden, CO", 
+    "Yampa River at Steamboat Springs, CO", "Yampa River above Elkhead Creek near Hayden, CO",              # Yampa
     "Yampa River below Craig, CO", "Yampa River near Maybell, CO",  "Yampa River at Deerlodge Park, CO",
-    "CLAFTCCO", "CLAFORCO", "LAPLODCO"
+    "CLAFTCCO", "CLAFORCO", "LAPLODCO",       # Poudre
+    "BADLOWCO",  "TCCKTCCO", "ARKPARCO"       # Arkansas
   ),
   gage_id = c(
               "09085000",
@@ -67,28 +90,34 @@ gage_tbl <- function() {
               "09260050",
               "06752000",
               "06752260", 
-              NA
+              NA,
+              "07093775",
+              "7C",
+              "07094500"
               ),
   min_threshold = c(
     550, 450, 
     450, # 200, 200,
     200,
     700, 500, 1100, 700,1300,
-    522.7273, 354.797, 170.1005
+    522.7273, 354.797, 170.1005,
+    200, 200, 200                   # Arkansas min (just a guess/placeholder at the moment)
     ),
   max_threshold = c(
     4000,3000,
     1700, # 1400, 2700, # took the mean of these 2 values
     400,
     5000, 5000, 10000, 5000, 25000,
-    1000000, 1000000, 1000000
+    1000000, 1000000, 1000000,
+    1000000, 1000000, 1000000       # Arkansas max (just a guess/placeholder at the moment)
   ),
   source = c(
     "USGS","USGS", 
     "USGS", # "USGS", "USGS",
     "USGS",
     "USGS", "USGS","USGS", "USGS", "USGS",
-    "USGS", "USGS", "CDSS"
+    "USGS", "USGS", "CDSS",
+    "USGS", "UAWCD", "USGS" 
   )
   ) %>% 
     dplyr::mutate(
@@ -427,10 +456,73 @@ get_rf_ricd <- function(df) {
     get_boatable_days(
       flow_col = "aug_flow",
       boat_col = "boat_mgmt"
-    )
+    ) %>% 
+    dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, aug_flow, boat_obs, boat_mgmt)
   
   return(rf)
   
+  
+}
+# ---- Arkansas helper functions ----
+
+# process Arkansas_flow_program.xlsx csv from Wellsville
+# provide path to Arkansas_flow_program.xlsx CSV
+# optionally provide threshold values for calculating boatable days
+process_ark <- function(
+    ark_flow_path = NULL, 
+    threshold     = NULL
+) {
+  
+  
+  if (is.null(threshold)) {
+    
+    threshold = c(100, 10000)
+    
+    message(paste0("No threshold values provided, using default thresholds:\nMin: 100 \nMax: 10000"))
+    
+  }
+  
+  ark <- 
+    ark_flow_path %>% 
+    readxl::read_xlsx() %>% 
+    dplyr::select(
+      datetime = Date,
+      flow     = Wellsville_Flow_cfs, 
+      mgmt     = Flow_Program_cfs
+    )
+  
+  # clean up data and have placeholders to join with rest of data
+  ark <- 
+    ark %>% 
+    dplyr::mutate(
+      river         = "Arkansas",
+      uid           = "WELLSVILLE",
+      station_num   = NA,
+      abbrev        = "WELLSVILLE",
+      usgs_site_id  = NA,
+      aug_flow      = flow + mgmt
+    ) %>% 
+    dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, aug_flow)
+  # dplyr::relocate(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, mgmt, aug_flow)
+  # dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow)
+  
+  # calculate boatable days
+  ark <- get_boatable_days(
+    df        = ark,
+    threshold = threshold,
+    flow_col  = "flow",
+    boat_col  = "boat_obs"
+  )
+  
+  # calculate management boatable days
+  ark <- get_boatable_days(
+    df        = ark,
+    threshold = threshold,
+    flow_col  = "aug_flow",
+    boat_col  = "boat_mgmt"
+  )
+  
+  return(ark)
   
 }
 

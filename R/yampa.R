@@ -14,3 +14,12 @@ gage_table <- gage_tbl()
 # ***************
 # ---- Yampa ----
 # ***************
+flow_df
+flow_df %>%
+  .$river %>% 
+  unique()
+
+flow_df %>% 
+  dplyr::filter(river == "Yampa") %>% 
+  .$usgs_site_id %>% 
+  unique()
