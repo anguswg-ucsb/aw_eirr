@@ -19,12 +19,18 @@ gage_table <- gage_tbl()
 # ---- Arkanasas ----
 # *******************
 
-ark <- process_ark(
-  ark_flow_path = ark_flow_path, 
-  threshold     = c(200, 100000)
+ark_mgmt <- get_ark_mgmt(
+  df            = flow_df, 
+  ark_flow_path = ark_flow_path
   )
 
-ark
+
+# ark <- process_ark(
+#   ark_flow_path = ark_flow_path, 
+#   threshold     = c(200, 100000)
+#   )
+
+# ark
 
 # *************************************
 # *************************************

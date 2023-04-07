@@ -31,10 +31,7 @@ gage_tbl <- function() {
    river = c(
             "Roaring Fork",
             "Roaring Fork",
-            "Roaring Fork",
-            # "Roaring Fork",
-            # "Roaring Fork",
-            "Roaring Fork",
+            "Yampa",
             "Yampa",
             "Yampa",
             "Yampa",
@@ -43,81 +40,146 @@ gage_tbl <- function() {
             "Cache La Poudre",
             "Cache La Poudre",
             "Cache La Poudre",
+            "Arkansas",
             "Arkansas",
             "Arkansas",
             "Arkansas"
             ),
    reach = c(
-     "Black Bridge to Veltus Park (Cemetery)", "Basalt to Carbondale",
-     "Lower Woody Creek Bridge to Rte. 82 Bridge/Slaughterhouse", 
+     "Black Bridge to Veltus Park (Cemetery)",
+     "Basalt to Carbondale",
+     "USGS FISH CR AT UPPER STA NR STEAMBOAT",
+     "USGS YAMPA RIVER AT STEAMBOAT SPRINGS",
+     "USGS YAMPA RIVER NEAR MAYBELL, CO",
+     "USGS YAMPA RIVER AT DEERLODGE PARK, CO",
+     "USGS YAMPA RIVER BELOW CRAIG, CO",
+     "USGS YAMPA RIVER ABOVE ELKHEAD CREEK NEAR HAYDEN, CO",
      # "Lower Woody Creek Bridge to Rte. 82 Bridge", "Slaughterhouse",  
-     "Weller Lake to Difficult CG",
-     'Yampa River Park to Transit Center', "Transit Center to Pump Station",
-     'Little Yampa Canyon', "Cross Mountain Gorge - 85 Rd to Deer Lodge Park Rd", 'Deerlodge Park to Echo Park',
+     # "Weller Lake to Difficult CG",
+     # 'Yampa River Park to Transit Center', 
+     # "Transit Center to Pump Station",
+     # 'Little Yampa Canyon', 
+     # "Cross Mountain Gorge - 85 Rd to Deer Lodge Park Rd", 
+     # 'Deerlodge Park to Echo Park',
      "Filter Plant",  "Poudre Whitewater Park", "Big South",    # Poudre
-     "BADGER CREEK, LOWER STATION, NEAR HOWARD, CO",            # Arkansas
-     "TEXAS CREEK NEAR TEXAS CREEK",
-     "ARKANSAS RIVER AT PARKDALE, CO"
+     "Numbers, Milkrun",
+     "Fishermans Bridge (BV town run), Brown's Canyon,, Stone Bridge to Salida",
+     "Rincon to Pinnacle Rock",
+     NA
      ),
    abbrev = c(
-     "ROAGLECO", "ROAEMMCO", NA, "ROADIFCO",           # Roaring Fork
-     "YAMSTECO", "YAMELKCO", "YAMCRACO", "YAMAYBCO",   # Yampa
-     "YAMDEECO", "CLAFTCCO", "CLAFORCO", "LAPLODCO",   # Poudre
-     "BADLOWCO", "TCCKTCCO", "ARKPARCO"                # Arkansas
+     "ROAGLECO", "ROAEMMCO",   # Roaring Fork
+     NA, NA, NA, NA, NA, NA, # Yampa
+     # "YAMSTECO", "YAMELKCO", "YAMCRACO", "YAMAYBCO",   
+     # "YAMDEECO", # Yampa
+     "CLAFTCCO", "CLAFORCO", "LAPLODCO",   # Poudre
+     NA, NA, NA, NA                # Arkansas
    ),
   desc = c(
-    "Roaring Fork River at Glenwood Springs, CO", "Roaring Fork near Emma, CO", # Roaring Fork
-    "Roaring Fork River Blw Maroon Creek Nr Aspen, CO", 
-    # "Roaring Fork River Blw Maroon Creek Nr Aspen, CO",
-    # "Roaring Fork River Blw Maroon Creek Nr Aspen, CO", 
-    "Roaring Fork River Ab Difficult Cr Nr Aspen, CO",
-    "Yampa River at Steamboat Springs, CO", "Yampa River above Elkhead Creek near Hayden, CO",              # Yampa
-    "Yampa River below Craig, CO", "Yampa River near Maybell, CO",  "Yampa River at Deerlodge Park, CO",
+    "Roaring Fork River at Glenwood Springs, CO",     # Roaring Fork
+    "Roaring Fork near Emma, CO",
+    
+    "USGS FISH CR AT UPPER STA NR STEAMBOAT",         # Yampa
+    "USGS YAMPA RIVER AT STEAMBOAT SPRINGS",
+    "USGS YAMPA RIVER NEAR MAYBELL, CO",
+    "USGS YAMPA RIVER AT DEERLODGE PARK, CO",
+    "USGS YAMPA RIVER BELOW CRAIG, CO",
+    "USGS YAMPA RIVER ABOVE ELKHEAD CREEK NEAR HAYDEN, CO",
+    
     "CLAFTCCO", "CLAFORCO", "LAPLODCO",       # Poudre
-    "BADLOWCO",  "TCCKTCCO", "ARKPARCO"       # Arkansas
+    
+    "Arkansas River below Granite, CO",
+    "Arkansas River near Nathrop, CO",
+    "Arkansas River at Parkdale, CO",
+    "Arkansas River near Wellsville, CO"      # Arkansas
   ),
   gage_id = c(
-              "09085000",
+              "09085000",       # Roaring Fork
               "09081000",
-              "09076300",
-              # "09076300",
-              # "09076300",
-              "09073300",
+              
+              "09238900",       # Yampa
               "09239500",
-              "09244490",
-              "09247600",
               "09251000",
               "09260050",
-              "06752000",
-              "06752260", 
-              NA,
-              "07093775",
-              "7C",
-              "07094500"
+              "09247600",
+              "09244490",
+              # "09073300",
+              # "09239500",
+              # "09244490",
+              # "09247600",
+              # "09251000",
+              # "09260050",
+              # "06752000",
+              # "06752260", 
+              "06752000", "06752260", NA, # Poudre
+              
+              "07087050",                 # Arkansas
+              "07091200",
+              "07094500", 
+              "07093700"
               ),
-  min_threshold = c(
-    550, 450, 
-    450, # 200, 200,
-    200,
-    700, 500, 1100, 700,1300,
-    522.7273, 354.797, 170.1005,
-    200, 200, 200                   # Arkansas min (just a guess/placeholder at the moment)
+  min_accept = c(
+    550, 450, # Roaring Fork
+    
+    400, # Yampa
+    700,
+    700,
+    1300,
+    1100,
+    500,
+    
+    522.7273, 354.797, 170.1005,         # Poudre
+    300, 300, 300, 300                   # Arkansas
     ),
-  max_threshold = c(
-    4000,3000,
-    1700, # 1400, 2700, # took the mean of these 2 values
-    400,
-    5000, 5000, 10000, 5000, 25000,
-    1000000, 1000000, 1000000,
-    1000000, 1000000, 1000000       # Arkansas max (just a guess/placeholder at the moment)
+  max_accept = c(
+    8000, 5000, # Roaring Fork
+    
+    1400,                        # Yampa
+    5000,
+    5000,
+    20000,
+    10000,
+    4000,
+    
+    1000000, 1000000, 1000000,    # Poudre
+    5000, 5000, 5000, 5000       # Arkansas
+  ),
+  min_opt = c(
+    800, 800, # Roaring Fork
+    
+    800,      # Yampa
+    1500,
+    1500,
+    2700,
+    1700,
+    900,
+    
+    NA, NA, NA,          # Poudre
+    NA, NA, NA, NA       # Arkansas
+  ),
+  max_opt = c(
+    6000, 3000,  # Roaring Fork
+    
+    1000,        # Yampa
+    2700,
+    3500,
+    20000,
+    2500,
+    1500,
+    
+    NA, NA, NA,          # Poudre
+    NA, NA, NA, NA       # Arkansas 
   ),
   source = c(
     "USGS","USGS", 
     "USGS", # "USGS", "USGS",
     "USGS",
-    "USGS", "USGS","USGS", "USGS", "USGS",
+    "USGS",
+    "USGS",
+    "USGS",
+    "USGS",
     "USGS", "USGS", "CDSS",
-    "USGS", "UAWCD", "USGS" 
+    "USGS", "USGS", "USGS", "USGS"
   )
   ) %>% 
     dplyr::mutate(
@@ -125,10 +187,17 @@ gage_tbl <- function() {
         is.na(abbrev)  ~ gage_id,
         is.na(gage_id) ~ abbrev,
         TRUE           ~ abbrev
+      ),
+      min_opt = dplyr::case_when(
+        is.na(min_opt)  ~ min_accept,
+        TRUE            ~ min_opt
+      ),
+      max_opt = dplyr::case_when(
+        is.na(max_opt)  ~ max_accept,
+        TRUE            ~ max_opt
       )
     ) %>% 
     dplyr::relocate(river, reach, abbrev, gage_id, uid, desc)
-  
   
 }
 
@@ -140,27 +209,56 @@ gage_tbl <- function() {
 #' @return streamflow dataframe with an added column indicating whether that day was boatable (1) or not boatable (0)
 #' @export
 get_boatable_days <- function(
-    df        = NULL,
-    threshold = NULL,
-    flow_col  = "flow",
-    boat_col  = "boat_obs"
+    df               = NULL,
+    threshold        = NULL,
+    accept_threshold = NULL,
+    opt_threshold    = NULL,
+    flow_col         = "flow",
+    boat_col         = "boat_obs"
     ) {
 
   message(paste0("calculating boatable days..."))
   
-  # if no threshold vector is given, get threshold values from gage_tbl() function
-  if(is.null(threshold)) {
+  if(is.null(accept_threshold)) {
     
-    min_threshold <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_threshold
-    max_threshold <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_threshold
+    min_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_accept
+    max_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_accept
     
-  # if threshold vector is given, use min value as lower bound and max value as upper bound
   } else {
     
-    min_threshold <- min(threshold)
-    max_threshold <- max(threshold)
+    min_accept <- min(accept_threshold)
+    max_accept <- max(accept_threshold)
     
   }
+  
+  if(is.null(opt_threshold)) {
+    
+    min_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_opt
+    max_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_opt
+    
+  } else {
+    
+    min_opt <- min(opt_threshold)
+    max_opt <- max(opt_threshold)
+    
+  }
+  
+  # # if no threshold vector is given, get threshold values from gage_tbl() function
+  # if(is.null(threshold)) {
+  #   
+  #   min_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_accept
+  #   max_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_accept
+  #   
+  #   min_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_opt
+  #   max_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_opt
+  #   
+  # # if threshold vector is given, use min value as lower bound and max value as upper bound
+  # } else {
+  #   
+  #   min_accept <- min(threshold)
+  #   max_accept <- max(threshold)
+  #   
+  # }
   
   # flow_col = "flow"
   # as.vector(df[, flow_col])
@@ -203,6 +301,7 @@ get_flows <- function(
   
   # loop over each row of the gage dataframe
   flow_df <- lapply(1:nrow(gage_table), function(i) {
+    # i = 1
     
     message(paste0(
       i, "/", nrow(gage_table),
@@ -233,13 +332,13 @@ get_flows <- function(
       ) %>% 
       dplyr::relocate(river, uid, station_num, abbrev, usgs_site_id, datetime, flow)
 
-    # add boatable days column 
-    sw <- get_boatable_days(
-                          sw, 
-                          flow_col = "flow",
-                          boat_col = "boat_obs"
-                        )
-    
+    # # add boatable days column 
+    # sw <- get_boatable_days(
+    #                       sw, 
+    #                       flow_col = "flow",
+    #                       boat_col = "boat_obs"
+    #                     )
+    # 
     message(paste0(
       "--------------------------------------------------"
     ))
@@ -413,6 +512,7 @@ get_rf_events <- function(df) {
 
 # calculate RICD Management flows and boatable days under this scenario
 get_rf_ricd <- function(df) {
+  
   # df <- flow_df
   rf <-
     df %>% 
@@ -446,18 +546,29 @@ get_rf_ricd <- function(df) {
         !is.na(mgmt_flow)  ~ TRUE,
         TRUE               ~ FALSE
       ),
-      aug_flow = dplyr::case_when(
-        is_mgmt == TRUE   ~ mgmt_flow,
+      flow_imp = dplyr::case_when(
+        mgmt_flow > flow  ~ mgmt_flow, 
         TRUE              ~ flow
       )
+      # flow_imp = dplyr::case_when(
+        # is_mgmt == TRUE   ~ mgmt_flow,
+        # TRUE              ~ flow
+      # )
     ) %>% 
     dplyr::ungroup() %>% 
     dplyr::select(-year, -month, -day) %>% 
-    get_boatable_days(
-      flow_col = "aug_flow",
-      boat_col = "boat_mgmt"
-    ) %>% 
-    dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, aug_flow, boat_obs, boat_mgmt)
+    # get_boatable_days(
+    #   flow_col = "aug_flow",
+    #   boat_col = "boat_mgmt"
+    # ) %>% 
+    dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, 
+                  flow_preimp = flow, 
+                  flow_imp)
+    # get_boatable_days(
+    #   flow_col = "aug_flow",
+    #   boat_col = "boat_mgmt"
+    # ) %>% 
+    # dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, aug_flow, boat_obs, boat_mgmt)
   
   return(rf)
   
@@ -524,6 +635,50 @@ process_ark <- function(
   
   return(ark)
   
+}
+
+get_ark_mgmt <- function(
+    df            = NULL,
+    ark_flow_path = NULL
+) {
+  
+  program <- 
+    ark_flow_path %>% 
+    readxl::read_xlsx() %>% 
+    dplyr::select(
+      datetime = Date,
+      flow     = Wellsville_Flow_cfs, 
+      mgmt     = Flow_Program_cfs
+    ) %>% 
+    dplyr::mutate(
+      datetime = as.Date(datetime)
+    )
+  
+  ark <- 
+    df %>% 
+    dplyr::filter(river == "Arkansas") %>% 
+    dplyr::mutate(
+      datetime = as.Date(datetime)
+    ) %>% 
+    dplyr::left_join(
+      dplyr::select(
+        program, datetime, mgmt
+        ),
+      by = "datetime"
+      ) %>% 
+    dplyr::mutate(
+      mgmt = dplyr::case_when(
+        is.na(mgmt) ~ 0,
+        TRUE        ~ mgmt
+      ),
+      flow_preimp = flow - mgmt
+    ) %>% 
+      dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, 
+                    flow_preimp, 
+                    flow_imp = flow
+                    )
+  
+  return(ark)
 }
 
 # impute missing values w/ mean
