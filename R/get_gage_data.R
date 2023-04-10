@@ -8,15 +8,16 @@ library(dplyr)
 source("R/utils.R")
 
 # save output path
-save_path <- "data/streamflow/observed/boatable_flows.csv"
+save_path <- "data/streamflow/observed/flows"
 
 # check if streamflow discharge daily data already exists, otherwise get data
-if(file.exists(save_path)) {
+# if(file.exists(save_path)) {
+if(file.exists(paste0(save_path, ".csv")) & file.exists(paste0(save_path, ".rds")) ) {
   
-  message(paste0("Reading data from:\n---> ", save_path))
+  message(paste0("Reading data from:\n---> ", paste0(save_path, ".rds")))
   
-  flow_df <- readr::read_csv(save_path)
-  
+  flow_df <- readRDS(paste0(save_path, ".rds"))
+  # flow_df <- readr::read_csv(save_path)
 } else {
   
   # table with gage info and thresholds 
@@ -29,24 +30,15 @@ if(file.exists(save_path)) {
                   end_date   = Sys.Date()
                   )
 
+  message(paste0("Saving gage reference table:", 
+                 "\n---> ", save_path, ".csv",
+                 "\n---> ", save_path, ".rds"
+  )
+  )
+  
   # save out CSV
-  readr::write_csv(flow_df, save_path)
+  saveRDS(flow_df, paste0(save_path, ".rds"))
+  readr::write_csv(flow_df, paste0(save_path, ".csv"))
   
 } 
 
-# plot monthly total boatable days at each location
-# flow_df %>%
-# dplyr::mutate(
-#   year = lubridate::year(datetime),
-#   month = lubridate::month(datetime)
-# ) %>%
-#   dplyr::group_by(uid, year, month) %>%
-#   dplyr::summarise(
-#     tot_bd = sum(boatable_days, na.rm = T)
-#   ) %>%
-#   dplyr::mutate(
-#     date = as.Date(paste0(year, "-", month, "-01"))
-#   ) %>%
-#   ggplot2::ggplot() +
-#   ggplot2::geom_col(ggplot2::aes(x = date, y = tot_bd)) +
-#   ggplot2::facet_wrap(~uid, scales = "fixed")

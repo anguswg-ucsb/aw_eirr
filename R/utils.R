@@ -510,70 +510,6 @@ get_rf_events <- function(df) {
   
 }
 
-# calculate RICD Management flows and boatable days under this scenario
-get_rf_ricd <- function(df) {
-  
-  # df <- flow_df
-  rf <-
-    df %>% 
-    dplyr::filter(river == "Roaring Fork") %>% 
-    dplyr::mutate(
-      year  = lubridate::year(datetime),
-      month = tolower(lubridate::month(datetime, label = T)),
-      day   = lubridate::day(datetime)
-    ) %>% 
-    dplyr::group_by(usgs_site_id, year) %>% 
-    dplyr::mutate(
-      mgmt_flow = dplyr::case_when(
-        month == "mar" & day >= 15        ~ 230,
-        month == "apr" & day <= 14        ~ 230,
-        month == "apr" & day >= 15        ~ 310,
-        month == "may" & day <= 14        ~ 575,
-        month == "may" & day >= 15     ~ 1000,
-        # month == "may" & day >= 15 | month == "jun" | month == "jul" & day <= 14 ~ 1000,
-        month == "jun"                   ~ 1000,
-        month == "jul" & day <= 14        ~ 1000,
-        month == "jul" & day >= 15        ~ 575,
-        month %in% c("aug", "sep", "oct") ~ 310,
-        month == "nov"                    ~ 230,
-        TRUE                              ~ NA_real_
-      ),
-      is_mgmt = dplyr::case_when(
-        !is.na(mgmt_flow) & mgmt_flow > flow  ~ TRUE,
-        TRUE                                  ~ FALSE
-      ),
-      is_mgmt_period = dplyr::case_when(
-        !is.na(mgmt_flow)  ~ TRUE,
-        TRUE               ~ FALSE
-      ),
-      flow_imp = dplyr::case_when(
-        mgmt_flow > flow  ~ mgmt_flow, 
-        TRUE              ~ flow
-      )
-      # flow_imp = dplyr::case_when(
-        # is_mgmt == TRUE   ~ mgmt_flow,
-        # TRUE              ~ flow
-      # )
-    ) %>% 
-    dplyr::ungroup() %>% 
-    dplyr::select(-year, -month, -day) %>% 
-    # get_boatable_days(
-    #   flow_col = "aug_flow",
-    #   boat_col = "boat_mgmt"
-    # ) %>% 
-    dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, 
-                  flow_preimp = flow, 
-                  flow_imp)
-    # get_boatable_days(
-    #   flow_col = "aug_flow",
-    #   boat_col = "boat_mgmt"
-    # ) %>% 
-    # dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, aug_flow, boat_obs, boat_mgmt)
-  
-  return(rf)
-  
-  
-}
 # ---- Arkansas helper functions ----
 
 # process Arkansas_flow_program.xlsx csv from Wellsville
@@ -681,6 +617,267 @@ get_ark_mgmt <- function(
   return(ark)
 }
 
+get_yampa_mgmt <- function(
+    df            = NULL,
+    yampa_flow_path = NULL
+) {
+  
+  # read in Yampa flow managment program data
+  program <- 
+    yampa_flow_path %>% 
+    readxl::read_xlsx() %>% 
+    janitor::clean_names() %>% 
+    dplyr::select(
+      datetime = date,
+      mgmt     = daily_cfs_restored
+    ) %>% 
+    dplyr::mutate(
+      datetime = as.Date(datetime)
+    )
+  
+  # subset flow_df to Yampa flows
+  yampa <-
+    df %>% 
+    dplyr::filter(river == "Yampa") %>% 
+    dplyr::mutate(
+      flow = dplyr::case_when(
+        flow < 0 ~ 0,
+        TRUE     ~ flow
+      )
+    )
+  
+  # full_dates <- data.frame(datetime = seq(
+  #                                       min(program$datetime), 
+  #                                       max(program$datetime),
+  #                                       by = "day")
+  #                          )
+  
+  # fill in missing managment flow dates to get complete daily flow dataframe
+  full_dates <- data.frame(datetime = seq(
+    min(yampa$datetime), 
+    max(yampa$datetime),
+    by = "day")
+  )
+  
+  # yampa managment flows 
+  yampa_mgmt <-
+    full_dates %>%  
+    dplyr::left_join(
+      program, 
+      by = "datetime"
+    ) %>% 
+    dplyr::mutate(
+      mgmt = dplyr::case_when(
+        is.na(mgmt) ~ 0,
+        TRUE        ~ mgmt
+      )
+    ) %>% 
+    dplyr::left_join(
+      yampa, 
+      by = "datetime"
+    ) %>% 
+    dplyr::mutate(
+      flow_preimp = flow - mgmt
+    ) %>% 
+    dplyr::select(
+      river, uid, station_num, abbrev, usgs_site_id, datetime, 
+      flow_preimp, 
+      flow_imp = flow
+    )
+  # tidyr::fill(everything())
+  
+  return(yampa_mgmt)
+}
+get_poudre_mgmt <- function(
+    df         = NULL,
+    api_key    = NULL
+) {
+  
+  # start and end dates from flow dataframe
+  start_date = min(dplyr::filter(df, river == "Cache La Poudre")$datetime)
+  end_date   = max(dplyr::filter(df, river == "Cache La Poudre")$datetime)
+  
+  # Reservoirs and WDIDs
+  res_structures <- data.frame(
+    structure  =  c('long_draw', 'chambers', 'joe_wright', 'peterson', 'barnes_meadow'),
+    wdid       =  c("0303676", "0303679", "0303678", "0303677", "0303683")
+  )
+  
+  # daily diversions
+  div <- cdssr::get_structures_divrec_ts(
+    wdid          = res_structures$wdid,
+    wc_identifier = "diversion",
+    start_date    = start_date,
+    end_date      = end_date, 
+    timescale     = "day",
+    api_key       = api_key
+  ) %>% 
+    dplyr::select(wdid, datetime, diversion = data_value) %>% 
+    dplyr::left_join(
+      res_structures, 
+      by = "wdid"
+    )
+  
+  # daily releases
+  rel <- cdssr::get_structures_divrec_ts(
+    wdid          = res_structures$wdid,
+    wc_identifier = "release",
+    start_date    = start_date,
+    end_date      = end_date, 
+    timescale     = "day", 
+    api_key       = api_key
+  ) %>% 
+    dplyr::select(wdid, datetime, release = data_value) %>% 
+    dplyr::left_join(
+      res_structures, 
+      by = "wdid"
+    )
+  
+  # join diversions/releases and calculate change in volume (dvolume)
+  divrel <-
+    div %>% 
+    dplyr::left_join(
+      dplyr::select(rel, -structure),
+      by = c("wdid", "datetime")
+    ) %>% 
+    replace(is.na(.), 0) %>% 
+    dplyr::mutate(
+      dvolume = diversion - release
+    ) %>%
+    dplyr::select(structure, wdid, datetime, dvolume) %>% 
+    tidyr::pivot_wider(
+      id_cols     = c(tidyselect::matches("structure"), datetime),
+      names_from  = "structure",
+      names_glue  = "{.value}_{structure}",
+      values_from = c(dvolume),
+      values_fn   = mean
+    ) %>% 
+    replace(is.na(.), 0) %>% 
+    dplyr::mutate(
+      below_mgmt = (dvolume_long_draw + dvolume_chambers +
+                      dvolume_joe_wright +  dvolume_peterson + dvolume_barnes_meadow),
+      above_mgmt = (dvolume_long_draw + dvolume_peterson)
+    ) %>% 
+    dplyr::select(datetime, pp_mgmt = below_mgmt, bs_mgmt = above_mgmt) 
+  
+  # calculate managment flows for Poudre river
+  poudre_mgmt <- 
+    df %>% 
+    dplyr::filter(river == "Cache La Poudre") %>% 
+    dplyr::left_join(
+      divrel,
+      by = "datetime"
+    ) %>% 
+    dplyr::mutate(
+      flow_preimp = dplyr::case_when(
+        uid %in% c("CLAFTCCO", "CLAFORCO") ~ flow + pp_mgmt,
+        uid %in% c("LAPLODCO")             ~ flow + bs_mgmt,
+        TRUE                               ~ flow
+      )
+    ) %>% 
+    dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow_preimp, flow_imp = flow)
+  
+  return(poudre_mgmt)
+  
+}
+
+# calculate RICD Management flows and boatable days under this scenario
+get_rf_mgmt <- function(df) {
+  
+  # df <- flow_df
+  rf <-
+    df %>% 
+    dplyr::filter(river == "Roaring Fork") %>% 
+    dplyr::mutate(
+      year  = lubridate::year(datetime),
+      month = tolower(lubridate::month(datetime, label = T)),
+      day   = lubridate::day(datetime)
+    ) %>% 
+    dplyr::group_by(usgs_site_id, year) %>% 
+    dplyr::mutate(
+      mgmt_flow = dplyr::case_when(
+        month == "mar" & day >= 15        ~ 230,
+        month == "apr" & day <= 14        ~ 230,
+        month == "apr" & day >= 15        ~ 310,
+        month == "may" & day <= 14        ~ 575,
+        month == "may" & day >= 15     ~ 1000,
+        # month == "may" & day >= 15 | month == "jun" | month == "jul" & day <= 14 ~ 1000,
+        month == "jun"                   ~ 1000,
+        month == "jul" & day <= 14        ~ 1000,
+        month == "jul" & day >= 15        ~ 575,
+        month %in% c("aug", "sep", "oct") ~ 310,
+        month == "nov"                    ~ 230,
+        TRUE                              ~ NA_real_
+      ),
+      is_mgmt = dplyr::case_when(
+        !is.na(mgmt_flow) & mgmt_flow > flow  ~ TRUE,
+        TRUE                                  ~ FALSE
+      ),
+      is_mgmt_period = dplyr::case_when(
+        !is.na(mgmt_flow)  ~ TRUE,
+        TRUE               ~ FALSE
+      ),
+      flow_imp = dplyr::case_when(
+        mgmt_flow > flow  ~ mgmt_flow, 
+        TRUE              ~ flow
+      )
+      # flow_imp = dplyr::case_when(
+      # is_mgmt == TRUE   ~ mgmt_flow,
+      # TRUE              ~ flow
+      # )
+    ) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::select(-year, -month, -day) %>% 
+    # get_boatable_days(
+    #   flow_col = "aug_flow",
+    #   boat_col = "boat_mgmt"
+    # ) %>% 
+    dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, 
+                  flow_preimp = flow, 
+                  flow_imp)
+  # get_boatable_days(
+  #   flow_col = "aug_flow",
+  #   boat_col = "boat_mgmt"
+  # ) %>% 
+  # dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, aug_flow, boat_obs, boat_mgmt)
+  
+  return(rf)
+  
+  
+}
+calc_boatable <- function(df) {
+  
+  gage_table <- gage_tbl()
+  
+  boat_df <- 
+    df  %>% 
+    dplyr::filter(uid %in% unique(gage_table$uid)) %>% 
+    dplyr::left_join(
+      dplyr::select(gage_table, uid, min_accept, max_accept, min_opt, max_opt), 
+      by = "uid"
+    ) %>% 
+    dplyr::mutate(
+      boat_preimp_opt = dplyr::case_when(
+        flow_preimp >= min_opt & flow_preimp <= max_opt ~ 1,              # Preimplementation optimal thresholds
+        TRUE                                            ~ 0
+      ),
+      boat_preimp_accept = dplyr::case_when(
+        flow_preimp >= min_accept & flow_preimp <= max_accept ~ 1,        # Preimplementation acceptable thresholds
+        TRUE                                                  ~ 0
+      ),
+      boat_imp_opt = dplyr::case_when(
+        flow_imp >= min_opt & flow_imp <= max_opt       ~ 1,              # Implementation optimal thresholds
+        TRUE                                            ~ 0
+      ),
+      boat_imp_accept = dplyr::case_when(
+        flow_imp >= min_accept & flow_imp <= max_accept ~ 1,              # Implementation acceptable thresholds
+        TRUE                                            ~ 0
+      )
+    )
+  
+  return(boat_df)
+  
+}
 # impute missing values w/ mean
 impute_mean <- function(x) {
   replace(x, is.na(x), mean(x, na.rm = TRUE))
@@ -1376,10 +1573,21 @@ get_res_flows <- function(
   #     values_fn   = mean
   #   ) 
 }
+
 # get reservoir flows in daily CFS
-get_reservoir_flows <- function(end_date = Sys.Date()) {
+get_reservoir_flows <- function(
+    wdids      = NULL,
+    start_date = NULL,
+    end_date   = Sys.Date(),
+    api_key    = NULL
+    ) {
   
   start_date <- end_date %m-% months(6)
+
+  # start_date <- "2019-01-01"
+  # end_date <- "2021-01-1"
+  # wdids       =  c("0303676", "0303679", "0303678", "0303677", "0303683")
+  # api_key    = NULL
   
   # Reservoirs and WDIDs
   res_structures <- data.frame(
@@ -1387,7 +1595,78 @@ get_reservoir_flows <- function(end_date = Sys.Date()) {
     wdid       =  c("0303676", "0303679", "0303678", "0303677", "0303683")
   )
   
+  wdids       =  c("0303676", "0303679", "0303678", "0303677", "0303683")
+  
   reservoir_lst <- list()
+  
+  # div <- cdssr::get_structures_divrec_ts(
+  #   wdid          = wdids,
+  #   wc_identifier = "diversion",
+  #   start_date    = start_date,
+  #   end_date      = end_date, 
+  #   timescale     = "day"
+  # ) %>% 
+  #   dplyr::select(wdid, datetime, diversion = data_value) %>% 
+  #   dplyr::left_join(
+  #     res_structures, 
+  #     by = "wdid"
+  #   )
+  # 
+  # 
+  # rel <- cdssr::get_structures_divrec_ts(
+  #   wdid          = wdids,
+  #   wc_identifier = "release",
+  #   start_date    = start_date,
+  #   end_date      = end_date, 
+  #   timescale     = "day"
+  # ) %>% 
+  #   dplyr::select(wdid, datetime, release = data_value) %>% 
+  #   dplyr::left_join(
+  #     res_structures, 
+  #     by = "wdid"
+  #     )
+  # 
+  # 
+  # divrel <-
+  #   div %>% 
+  #   dplyr::left_join(
+  #     dplyr::select(rel, -structure),
+  #     by = c("wdid", "datetime")
+  #   ) %>% 
+  #   replace(is.na(.), 0) %>% 
+  #   dplyr::mutate(
+  #     dvolume = diversion - release
+  #   ) %>%
+  #   dplyr::select(structure, wdid, datetime, dvolume) %>% 
+  #   tidyr::pivot_wider(
+  #     id_cols     = c(tidyselect::matches("structure"), datetime),
+  #     names_from  = "structure",
+  #     names_glue  = "{.value}_{structure}",
+  #     values_from = c(dvolume),
+  #     values_fn   = mean
+  #   ) %>% 
+  #   replace(is.na(.), 0) %>% 
+  #   dplyr::mutate(
+  #     below_mgmt = (dvolume_long_draw + dvolume_chambers + dvolume_joe_wright +  dvolume_peterson + dvolume_barnes_meadow),
+  #     above_mgmt = (dvolume_long_draw + dvolume_peterson)
+  #     ) %>% 
+  #   dplyr::select(datetime, pp_mgmt = below_mgmt, bs_mgmt = above_mgmt) 
+  #   # dplyr::select(datetime, below_mgmt, above_mgmt) %>% 
+  #   # tidyr::pivot_longer(
+  #   #   cols      = c(below_mgmt, above_mgmt),
+  #   #   names_to  = "mgmt_area",
+  #   #   values_to = "mgmt"
+  #   #   ) %>%
+  #   # dplyr::mutate(
+  #   #   reach = dplyr::case_when(
+  #   #     mgmt_area == "below_mgmt" ~ "Poudre Whitewater Park, Filter Plant",
+  #   #     mgmt_area == "above_mgmt" ~ "Big South"
+  #   #   )
+  #   #   # reach = dplyr::case_when(
+  #   #   #   mgmt_area == "below_mgmt" ~ list(c("Poudre Whitewater Park", "Filter Plant")),
+  #   #   #   mgmt_area == "above_mgmt" ~ list(c("Big South"))
+  #   #   # )
+  #   # )
   
   # Loop through reservoir WDIDs and pull data from CDSS using getCDSSDiversionFlow()
   for (i in 1:length(res_structures$wdid)) {
