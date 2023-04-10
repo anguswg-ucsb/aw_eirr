@@ -201,91 +201,6 @@ gage_tbl <- function() {
   
 }
 
-#' Add boatable days column to streamflow dataframe 
-#'
-#' @param df dataframe with a "value" column representing streamflow in CFS 
-#' @param threshold numeric vector of 2 values, a minimum and maximum flow thresholds. The minimum value will represent the minimum flow threshold and the maximum value will represent the maximum flow threshold. For example, c(100, 2000) and c(2000, 100) will result in the same maximum/minimum flow threshold values. If no value is given, min and max threshold values are derived from gage_tbl() function dataframe. Default is NULL.
-#'
-#' @return streamflow dataframe with an added column indicating whether that day was boatable (1) or not boatable (0)
-#' @export
-get_boatable_days <- function(
-    df               = NULL,
-    threshold        = NULL,
-    accept_threshold = NULL,
-    opt_threshold    = NULL,
-    flow_col         = "flow",
-    boat_col         = "boat_obs"
-    ) {
-
-  message(paste0("calculating boatable days..."))
-  
-  if(is.null(accept_threshold)) {
-    
-    min_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_accept
-    max_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_accept
-    
-  } else {
-    
-    min_accept <- min(accept_threshold)
-    max_accept <- max(accept_threshold)
-    
-  }
-  
-  if(is.null(opt_threshold)) {
-    
-    min_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_opt
-    max_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_opt
-    
-  } else {
-    
-    min_opt <- min(opt_threshold)
-    max_opt <- max(opt_threshold)
-    
-  }
-  
-  # # if no threshold vector is given, get threshold values from gage_tbl() function
-  # if(is.null(threshold)) {
-  #   
-  #   min_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_accept
-  #   max_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_accept
-  #   
-  #   min_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_opt
-  #   max_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_opt
-  #   
-  # # if threshold vector is given, use min value as lower bound and max value as upper bound
-  # } else {
-  #   
-  #   min_accept <- min(threshold)
-  #   max_accept <- max(threshold)
-  #   
-  # }
-  
-  # flow_col = "flow"
-  # as.vector(df[, flow_col])
-  # class(as.numeric(as.vector(df[, flow_col])))
-  # as.numeric((unlist(as.vector(df[, flow_col]))))
-  # df$flow
-  # class(df$flow)
-  
-  # add boatable days tag
-  df[[boat_col]] <- ifelse(
-                          as.numeric((unlist(as.vector(df[, flow_col])))) >= min_threshold &
-                            as.numeric((unlist(as.vector(df[, flow_col])))) <= max_threshold, 
-                          1, 
-                          0
-                        )
-  # df$boatable_days <- ifelse(
-  #                         as.numeric((unlist(as.vector(df[, flow_col])))) >= min_threshold &
-  #                           as.numeric((unlist(as.vector(df[, flow_col])))) <= max_threshold, 
-  #                           1, 
-  #                           0
-  #                         )
-  # df$boatable_days <- ifelse(df$flow >= min_threshold & df$flow <= max_threshold, 1, 0)
-  
-  return(df)
-  
-}
-
 get_flows <- function(
   gage_table = NULL,
   start_date = "1980-01-01",
@@ -362,215 +277,6 @@ rf_ricd <- function() {
     end_date   = c("04-14", "04-30", "05-14", "07-14", "07-31", "10-31", "11-30"),
     flow_rate  = c(230, 310, 575, 1000, 575, 310, 230)
   )
-}
-
-# RICD rules
-# 10 total days
-# 1 event in May lasting (2 days per event,  580 CFS per day = 2*580 CFS = 1160 CFS over 2 days)
-# 2 events in June (4 days per event, 400 CFS per day = 4*400 CFS = 1600 CFS over 4 days)
-
-get_rf_events <- function(df) {
-  
-  # RICD rules
-  # 10 total days
-  # 1 event in May lasting (2 days per event,  580 CFS per day = 2*580 CFS = 1160 CFS over 2 days)
-  # 2 events in June (4 days per event, 400 CFS per day = 4*400 CFS = 1600 CFS over 4 days)
-  
-  # df <- mgmt
-    
-  # df %>% names()
-  
-  # df %>% 
-  #   dplyr::mutate(
-  #     month = lubridate::month(datetime),
-  #     year  = lubridate::year(datetime),
-  #     day   = lubridate::day(datetime)
-  #   ) %>%
-  #   dplyr::filter(
-  #     year %in% c(2020, 2021, 2022)
-  #   ) %>%
-  #   dplyr::select(datetime, uid, flow, aug_flow) %>% 
-  #   tidyr::pivot_longer(cols = c(flow, aug_flow)) %>% 
-  #   ggplot2::ggplot() +
-  #   ggplot2::geom_line(ggplot2::aes(x = datetime, y = value, color = name)) +
-  #   ggplot2::facet_wrap(~uid)
-  
-  library(zoo)
-  df <- data.frame(
-    date = seq(from = as.Date("2022-01-01"), to = as.Date("2022-01-31"), by = "day"),
-    value = runif(31, 1, 10),
-    lower_threshold = rep(3, 31),
-    upper_threshold = rep(7, 31)
-  )
-  
-  # define window size
-  window_size <- 4
-  
-  # calculate threshold count for each 4-day period
-  df <- df %>%
-    # rowwise() %>%
-    dplyr::group_by(date) %>% 
-    mutate(
-      threshold_count = sum(zoo::rollapply(value, width = window_size, FUN = function(x) {
-        sum(x >= lower_threshold & x <= upper_threshold)
-        }, 
-        align = "right", fill = NA))
-      )
-  
-  # print the results
-  print(df)
-  # create example data frame
-  df <- data.frame(
-    date = seq(from = as.Date("2022-01-01"), to = as.Date("2022-01-31"), by = "day"),
-    value = runif(31, 1, 10)
-  )
-  
-  # define the threshold range
-  lower_threshold <- 2
-  upper_threshold <- 7
-  
-  # perform a rolling 4-day window and count the number of times the values are within the threshold range
-  window_size <- 4
-  df$count_threshold_range <- zoo::rollapply(
-    df$value, 
-    width = window_size, 
-    FUN = function(x) {
-      sum(x >= lower_threshold & x <= upper_threshold)
-      }, align = "right", fill = NA)
-  
-  # print the results
-  print(df)
-  
-  tmp = 
-    df %>%
-    dplyr::filter(
-      uid == "ROAEMMCO"
-    ) %>% 
-    dplyr::mutate(
-      month = lubridate::month(datetime),
-      year  = lubridate::year(datetime),
-      day   = lubridate::day(datetime)
-    ) %>%
-    dplyr::relocate(datetime, year, month, day) %>% 
-    dplyr::filter(
-      month == 5 | month == 6, year == 2002
-    ) %>%
-    dplyr::group_by(year) %>%
-    # dplyr::mutate(
-    #   
-    # )
-    dplyr::mutate(
-        event_flow = dplyr::case_when(
-          month == 5 ~ 580,
-          month == 6 ~ 400,
-          TRUE ~ 0
-        ),
-        total_flow = flow + event_flow 
-      ) %>% 
-    dplyr::select(datetime, year, month, day, uid, flow, mgmt_flow, aug_flow, event_flow, total_flow)
-  
-  
-  
-  min_threshold <- gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$min_threshold
-  max_threshold <- gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$max_threshold
-  
-  tmp$min_threshold <-  gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$min_threshold
-  tmp$max_threshold <-  gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$max_threshold
-  # 
-  # perform a rolling 4-day window and count the number of times the values are within the threshold range
-  # window_size <- 4
-  may <- tmp %>% dplyr::filter(month == 5)
-  
-  may$boat_count <- zoo::rollapply(
-                            may$total_flow, 
-                            width = 2, 
-                            FUN = function(x) {
-                              # sum(x >= min_threshold & x <= max_threshold)
-                              sum(x >= min_threshold & x <= max_threshold)
-                              }, 
-                            align = "right",
-                            fill  = NA
-                            )
-  
-  
-  june <- tmp %>% dplyr::filter(month == 6)
-  
-  june$boat_count <- zoo::rollapply(
-                              june$total_flow, 
-                              width = 4, 
-                              FUN = function(x) {
-                                # sum(x >= min_threshold & x <= max_threshold)
-                                sum(x >= min_threshold & x <= max_threshold)
-                              }, 
-                              align = "right",
-                              fill  = NA
-                            )
-  
-  
-  
-}
-
-# ---- Arkansas helper functions ----
-
-# process Arkansas_flow_program.xlsx csv from Wellsville
-# provide path to Arkansas_flow_program.xlsx CSV
-# optionally provide threshold values for calculating boatable days
-process_ark <- function(
-    ark_flow_path = NULL, 
-    threshold     = NULL
-) {
-  
-  
-  if (is.null(threshold)) {
-    
-    threshold = c(100, 10000)
-    
-    message(paste0("No threshold values provided, using default thresholds:\nMin: 100 \nMax: 10000"))
-    
-  }
-  
-  ark <- 
-    ark_flow_path %>% 
-    readxl::read_xlsx() %>% 
-    dplyr::select(
-      datetime = Date,
-      flow     = Wellsville_Flow_cfs, 
-      mgmt     = Flow_Program_cfs
-    )
-  
-  # clean up data and have placeholders to join with rest of data
-  ark <- 
-    ark %>% 
-    dplyr::mutate(
-      river         = "Arkansas",
-      uid           = "WELLSVILLE",
-      station_num   = NA,
-      abbrev        = "WELLSVILLE",
-      usgs_site_id  = NA,
-      aug_flow      = flow + mgmt
-    ) %>% 
-    dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, aug_flow)
-  # dplyr::relocate(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, mgmt, aug_flow)
-  # dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow)
-  
-  # calculate boatable days
-  ark <- get_boatable_days(
-    df        = ark,
-    threshold = threshold,
-    flow_col  = "flow",
-    boat_col  = "boat_obs"
-  )
-  
-  # calculate management boatable days
-  ark <- get_boatable_days(
-    df        = ark,
-    threshold = threshold,
-    flow_col  = "aug_flow",
-    boat_col  = "boat_mgmt"
-  )
-  
-  return(ark)
-  
 }
 
 get_ark_mgmt <- function(
@@ -942,6 +648,302 @@ calc_boatable <- function(df) {
   return(boat_df)
   
 }
+
+# *******************************************************************
+# *******************************************************************
+# *******************************************************************
+
+# ***********************
+# ---- OLD FUNCTIONS ----
+# ***********************
+
+#' Add boatable days column to streamflow dataframe 
+#'
+#' @param df dataframe with a "value" column representing streamflow in CFS 
+#' @param threshold numeric vector of 2 values, a minimum and maximum flow thresholds. The minimum value will represent the minimum flow threshold and the maximum value will represent the maximum flow threshold. For example, c(100, 2000) and c(2000, 100) will result in the same maximum/minimum flow threshold values. If no value is given, min and max threshold values are derived from gage_tbl() function dataframe. Default is NULL.
+#'
+#' @return streamflow dataframe with an added column indicating whether that day was boatable (1) or not boatable (0)
+#' @export
+get_boatable_days <- function(
+    df               = NULL,
+    threshold        = NULL,
+    accept_threshold = NULL,
+    opt_threshold    = NULL,
+    flow_col         = "flow",
+    boat_col         = "boat_obs"
+) {
+  
+  message(paste0("calculating boatable days..."))
+  
+  if(is.null(accept_threshold)) {
+    
+    min_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_accept
+    max_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_accept
+    
+  } else {
+    
+    min_accept <- min(accept_threshold)
+    max_accept <- max(accept_threshold)
+    
+  }
+  
+  if(is.null(opt_threshold)) {
+    
+    min_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_opt
+    max_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_opt
+    
+  } else {
+    
+    min_opt <- min(opt_threshold)
+    max_opt <- max(opt_threshold)
+    
+  }
+  
+  # # if no threshold vector is given, get threshold values from gage_tbl() function
+  # if(is.null(threshold)) {
+  #   
+  #   min_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_accept
+  #   max_accept <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_accept
+  #   
+  #   min_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$min_opt
+  #   max_opt <- gage_tbl()[gage_tbl()$uid == df$uid[1],]$max_opt
+  #   
+  # # if threshold vector is given, use min value as lower bound and max value as upper bound
+  # } else {
+  #   
+  #   min_accept <- min(threshold)
+  #   max_accept <- max(threshold)
+  #   
+  # }
+  
+  # flow_col = "flow"
+  # as.vector(df[, flow_col])
+  # class(as.numeric(as.vector(df[, flow_col])))
+  # as.numeric((unlist(as.vector(df[, flow_col]))))
+  # df$flow
+  # class(df$flow)
+  
+  # add boatable days tag
+  df[[boat_col]] <- ifelse(
+    as.numeric((unlist(as.vector(df[, flow_col])))) >= min_threshold &
+      as.numeric((unlist(as.vector(df[, flow_col])))) <= max_threshold, 
+    1, 
+    0
+  )
+  # df$boatable_days <- ifelse(
+  #                         as.numeric((unlist(as.vector(df[, flow_col])))) >= min_threshold &
+  #                           as.numeric((unlist(as.vector(df[, flow_col])))) <= max_threshold, 
+  #                           1, 
+  #                           0
+  #                         )
+  # df$boatable_days <- ifelse(df$flow >= min_threshold & df$flow <= max_threshold, 1, 0)
+  
+  return(df)
+  
+}
+
+# process Arkansas_flow_program.xlsx csv from Wellsville
+# provide path to Arkansas_flow_program.xlsx CSV
+# optionally provide threshold values for calculating boatable days
+process_ark <- function(
+    ark_flow_path = NULL, 
+    threshold     = NULL
+) {
+  
+  
+  if (is.null(threshold)) {
+    
+    threshold = c(100, 10000)
+    
+    message(paste0("No threshold values provided, using default thresholds:\nMin: 100 \nMax: 10000"))
+    
+  }
+  
+  ark <- 
+    ark_flow_path %>% 
+    readxl::read_xlsx() %>% 
+    dplyr::select(
+      datetime = Date,
+      flow     = Wellsville_Flow_cfs, 
+      mgmt     = Flow_Program_cfs
+    )
+  
+  # clean up data and have placeholders to join with rest of data
+  ark <- 
+    ark %>% 
+    dplyr::mutate(
+      river         = "Arkansas",
+      uid           = "WELLSVILLE",
+      station_num   = NA,
+      abbrev        = "WELLSVILLE",
+      usgs_site_id  = NA,
+      aug_flow      = flow + mgmt
+    ) %>% 
+    dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, aug_flow)
+  # dplyr::relocate(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, mgmt, aug_flow)
+  # dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow)
+  
+  # calculate boatable days
+  ark <- get_boatable_days(
+    df        = ark,
+    threshold = threshold,
+    flow_col  = "flow",
+    boat_col  = "boat_obs"
+  )
+  
+  # calculate management boatable days
+  ark <- get_boatable_days(
+    df        = ark,
+    threshold = threshold,
+    flow_col  = "aug_flow",
+    boat_col  = "boat_mgmt"
+  )
+  
+  return(ark)
+  
+}
+
+get_rf_events <- function(df) {
+  
+  # RICD rules
+  # 10 total days
+  # 1 event in May lasting (2 days per event,  580 CFS per day = 2*580 CFS = 1160 CFS over 2 days)
+  # 2 events in June (4 days per event, 400 CFS per day = 4*400 CFS = 1600 CFS over 4 days)
+  
+  # df <- mgmt
+  
+  # df %>% names()
+  
+  # df %>% 
+  #   dplyr::mutate(
+  #     month = lubridate::month(datetime),
+  #     year  = lubridate::year(datetime),
+  #     day   = lubridate::day(datetime)
+  #   ) %>%
+  #   dplyr::filter(
+  #     year %in% c(2020, 2021, 2022)
+  #   ) %>%
+  #   dplyr::select(datetime, uid, flow, aug_flow) %>% 
+  #   tidyr::pivot_longer(cols = c(flow, aug_flow)) %>% 
+  #   ggplot2::ggplot() +
+  #   ggplot2::geom_line(ggplot2::aes(x = datetime, y = value, color = name)) +
+  #   ggplot2::facet_wrap(~uid)
+  
+  library(zoo)
+  df <- data.frame(
+    date = seq(from = as.Date("2022-01-01"), to = as.Date("2022-01-31"), by = "day"),
+    value = runif(31, 1, 10),
+    lower_threshold = rep(3, 31),
+    upper_threshold = rep(7, 31)
+  )
+  
+  # define window size
+  window_size <- 4
+  
+  # calculate threshold count for each 4-day period
+  df <- df %>%
+    # rowwise() %>%
+    dplyr::group_by(date) %>% 
+    mutate(
+      threshold_count = sum(zoo::rollapply(value, width = window_size, FUN = function(x) {
+        sum(x >= lower_threshold & x <= upper_threshold)
+      }, 
+      align = "right", fill = NA))
+    )
+  
+  # print the results
+  print(df)
+  # create example data frame
+  df <- data.frame(
+    date = seq(from = as.Date("2022-01-01"), to = as.Date("2022-01-31"), by = "day"),
+    value = runif(31, 1, 10)
+  )
+  
+  # define the threshold range
+  lower_threshold <- 2
+  upper_threshold <- 7
+  
+  # perform a rolling 4-day window and count the number of times the values are within the threshold range
+  window_size <- 4
+  df$count_threshold_range <- zoo::rollapply(
+    df$value, 
+    width = window_size, 
+    FUN = function(x) {
+      sum(x >= lower_threshold & x <= upper_threshold)
+    }, align = "right", fill = NA)
+  
+  # print the results
+  print(df)
+  
+  tmp = 
+    df %>%
+    dplyr::filter(
+      uid == "ROAEMMCO"
+    ) %>% 
+    dplyr::mutate(
+      month = lubridate::month(datetime),
+      year  = lubridate::year(datetime),
+      day   = lubridate::day(datetime)
+    ) %>%
+    dplyr::relocate(datetime, year, month, day) %>% 
+    dplyr::filter(
+      month == 5 | month == 6, year == 2002
+    ) %>%
+    dplyr::group_by(year) %>%
+    # dplyr::mutate(
+    #   
+    # )
+    dplyr::mutate(
+      event_flow = dplyr::case_when(
+        month == 5 ~ 580,
+        month == 6 ~ 400,
+        TRUE ~ 0
+      ),
+      total_flow = flow + event_flow 
+    ) %>% 
+    dplyr::select(datetime, year, month, day, uid, flow, mgmt_flow, aug_flow, event_flow, total_flow)
+  
+  
+  
+  min_threshold <- gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$min_threshold
+  max_threshold <- gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$max_threshold
+  
+  tmp$min_threshold <-  gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$min_threshold
+  tmp$max_threshold <-  gage_tbl()[gage_tbl()$uid == tmp$uid[1],]$max_threshold
+  # 
+  # perform a rolling 4-day window and count the number of times the values are within the threshold range
+  # window_size <- 4
+  may <- tmp %>% dplyr::filter(month == 5)
+  
+  may$boat_count <- zoo::rollapply(
+    may$total_flow, 
+    width = 2, 
+    FUN = function(x) {
+      # sum(x >= min_threshold & x <= max_threshold)
+      sum(x >= min_threshold & x <= max_threshold)
+    }, 
+    align = "right",
+    fill  = NA
+  )
+  
+  
+  june <- tmp %>% dplyr::filter(month == 6)
+  
+  june$boat_count <- zoo::rollapply(
+    june$total_flow, 
+    width = 4, 
+    FUN = function(x) {
+      # sum(x >= min_threshold & x <= max_threshold)
+      sum(x >= min_threshold & x <= max_threshold)
+    }, 
+    align = "right",
+    fill  = NA
+  )
+  
+  
+  
+}
+
 # impute missing values w/ mean
 impute_mean <- function(x) {
   replace(x, is.na(x), mean(x, na.rm = TRUE))
