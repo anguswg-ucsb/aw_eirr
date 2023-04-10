@@ -841,10 +841,74 @@ get_rf_mgmt <- function(df) {
   # ) %>% 
   # dplyr::select(river, uid, station_num, abbrev, usgs_site_id, datetime, flow, aug_flow, boat_obs, boat_mgmt)
   
+  # # RICD rules
+  # # 10 total days
+  # # 1 event in May lasting (2 days per event,  580 CFS per day = 2*580 CFS = 1160 CFS over 2 days)
+  # # 2 events in June (4 days per event, 400 CFS per day = 4*400 CFS = 1600 CFS over 4 days)
+  
+  
+  # adding 2 days of increased flows to May
+  may_df <- 
+    rf %>% 
+    dplyr::mutate(
+      month = lubridate::month(datetime),
+      year = lubridate::year(datetime)
+    ) %>% 
+    dplyr::filter(month %in% c(5)) %>% 
+    # dplyr::filter(month %in% c(5), year %in% c(2006, 2007)) %>% 
+    dplyr::group_by(uid, year) %>% 
+    dplyr::arrange(flow_preimp, .by_group = T) %>% 
+    dplyr::mutate(
+      n = 1:n()
+    ) %>% 
+    dplyr::mutate(
+      flow_imp = dplyr::case_when(
+        n %in% c(1, 2) ~ flow_preimp + 580,
+        TRUE           ~ flow_imp
+      )
+    ) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::select(-n, -month, -year)
+  
+  # adding 4 days of increased flows to June
+  june_df <- 
+    rf %>% 
+    dplyr::mutate(
+      month = lubridate::month(datetime),
+      year = lubridate::year(datetime)
+    ) %>% 
+    dplyr::filter(month %in% c(6)) %>% 
+    # dplyr::filter(month %in% c(6),  year %in% c(2006, 2007)) %>% 
+    dplyr::group_by(uid, year) %>% 
+    dplyr::arrange(flow_preimp, .by_group = T) %>% 
+    dplyr::mutate(
+      n = 1:n()
+    ) %>% 
+    dplyr::mutate(
+      flow_imp = dplyr::case_when(
+        n %in% c(1, 2, 3, 4) ~ flow_preimp + 400,
+        TRUE                 ~ flow_imp
+      )
+    ) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::select(-n, -month, -year)
+  
+  # removing may and june data, and replacing with new May/June Values
+  rf <- 
+    rf %>% 
+    dplyr::mutate(
+      month = lubridate::month(datetime),
+      year = lubridate::year(datetime)
+    ) %>% 
+    dplyr::filter(!month %in% c(5, 6)) %>% 
+    dplyr::select(-month, -year) %>% 
+    dplyr::bind_rows(may_df, june_df)
+  
   return(rf)
   
   
 }
+
 calc_boatable <- function(df) {
   
   gage_table <- gage_tbl()
