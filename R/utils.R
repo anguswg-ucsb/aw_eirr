@@ -1665,75 +1665,6 @@ get_reservoir_flows <- function(
   
   reservoir_lst <- list()
   
-  # div <- cdssr::get_structures_divrec_ts(
-  #   wdid          = wdids,
-  #   wc_identifier = "diversion",
-  #   start_date    = start_date,
-  #   end_date      = end_date, 
-  #   timescale     = "day"
-  # ) %>% 
-  #   dplyr::select(wdid, datetime, diversion = data_value) %>% 
-  #   dplyr::left_join(
-  #     res_structures, 
-  #     by = "wdid"
-  #   )
-  # 
-  # 
-  # rel <- cdssr::get_structures_divrec_ts(
-  #   wdid          = wdids,
-  #   wc_identifier = "release",
-  #   start_date    = start_date,
-  #   end_date      = end_date, 
-  #   timescale     = "day"
-  # ) %>% 
-  #   dplyr::select(wdid, datetime, release = data_value) %>% 
-  #   dplyr::left_join(
-  #     res_structures, 
-  #     by = "wdid"
-  #     )
-  # 
-  # 
-  # divrel <-
-  #   div %>% 
-  #   dplyr::left_join(
-  #     dplyr::select(rel, -structure),
-  #     by = c("wdid", "datetime")
-  #   ) %>% 
-  #   replace(is.na(.), 0) %>% 
-  #   dplyr::mutate(
-  #     dvolume = diversion - release
-  #   ) %>%
-  #   dplyr::select(structure, wdid, datetime, dvolume) %>% 
-  #   tidyr::pivot_wider(
-  #     id_cols     = c(tidyselect::matches("structure"), datetime),
-  #     names_from  = "structure",
-  #     names_glue  = "{.value}_{structure}",
-  #     values_from = c(dvolume),
-  #     values_fn   = mean
-  #   ) %>% 
-  #   replace(is.na(.), 0) %>% 
-  #   dplyr::mutate(
-  #     below_mgmt = (dvolume_long_draw + dvolume_chambers + dvolume_joe_wright +  dvolume_peterson + dvolume_barnes_meadow),
-  #     above_mgmt = (dvolume_long_draw + dvolume_peterson)
-  #     ) %>% 
-  #   dplyr::select(datetime, pp_mgmt = below_mgmt, bs_mgmt = above_mgmt) 
-  #   # dplyr::select(datetime, below_mgmt, above_mgmt) %>% 
-  #   # tidyr::pivot_longer(
-  #   #   cols      = c(below_mgmt, above_mgmt),
-  #   #   names_to  = "mgmt_area",
-  #   #   values_to = "mgmt"
-  #   #   ) %>%
-  #   # dplyr::mutate(
-  #   #   reach = dplyr::case_when(
-  #   #     mgmt_area == "below_mgmt" ~ "Poudre Whitewater Park, Filter Plant",
-  #   #     mgmt_area == "above_mgmt" ~ "Big South"
-  #   #   )
-  #   #   # reach = dplyr::case_when(
-  #   #   #   mgmt_area == "below_mgmt" ~ list(c("Poudre Whitewater Park", "Filter Plant")),
-  #   #   #   mgmt_area == "above_mgmt" ~ list(c("Big South"))
-  #   #   # )
-  #   # )
-  
   # Loop through reservoir WDIDs and pull data from CDSS using getCDSSDiversionFlow()
   for (i in 1:length(res_structures$wdid)) {
     
@@ -1938,39 +1869,7 @@ get_model_inputs <- function(
     ) %>% 
       dplyr::select(date, canyon = flow)
     
-    # logger::log_info('Retrieving flow data - Poudre Valley Canal')
-    # # get flow data for Poudre Valley Canal
-    # poudre_valley_canal <- getCDSSDiversionFlow(
-    #   wdid        = '0300907'
-    # ) %>% 
-    #   group_by(date) %>% 
-    #   summarize(valley = mean(flow,na.rm = T)) %>% 
-    #   ungroup() %>% 
-    #   dplyr::select(date, valley)
-    # # rename(valley = flow) 
-    # 
-    # logger::log_info('Retrieving flow data - North Fork Poudre River')
-    # # get flow data for North Fork Poudre river
-    # north_fork <- GetCDSSStationFlow(
-    #   start_date  = start_date,
-    #   end_date    = end_date,
-    #   site_abbrev = 'CLANSECO',
-    #   timescale   = "daily"
-    # ) %>% 
-    #   dplyr::select(date, northfk = flow)
-    # 
-    # logger::log_info('Retrieving flow data - North Poudre Supply Canal')
-    # 
-    # # get flow data for the North Poudre Supply Canal
-    # poudre_supply_canal <- getCDSSDiversionFlow(
-    #   wdid        = '0300905'
-    # ) %>% 
-    #   filter(
-    #     date >= start_date,
-    #     date <= end_date
-    #   ) %>% 
-    #   dplyr::select(date, supply = flow)
-    
+ 
     logger::log_info('Calculating mass balance model for {segment}')
     
     poudre_park_model <- 
@@ -2183,13 +2082,6 @@ calc_res_op_pct <- function(agg_nat_flows, time_res = "month") {
     return(res_operations_pct)
     
   } else if(time_res == "day") {
-    
-    # res_operations_pct %>%
-    #   ggplot() +
-    #   geom_line(aes(x = day, y = res_op_pct)) +
-    #   scale_y_continuous(limits = c(-1, 1)) +
-    #   geom_hline(yintercept = 0, col = "red") +
-    #   facet_wrap(~month)
     
     res_operations_pct <- 
       agg_nat_flows %>%
