@@ -121,12 +121,18 @@ gage_tbl <- function() {
   min_accept = c(
     550, 450, # Roaring Fork
     
-    400, # Yampa
-    700,
-    700,
-    1300,
-    1100,
-    500,
+    # 400, # Yampa
+    # 700,
+    # 700,
+    # 1300,
+    # 1100,
+    # 500,
+    85, # Yampa
+    85,
+    85,
+    85,
+    85,
+    85,
     
     522.7273, 354.797, 170.1005,         # Poudre
     300, 300, 300, 300                   # Arkansas
@@ -408,7 +414,7 @@ get_poudre_mgmt <- function(
     structure  =  c('long_draw', 'chambers', 'joe_wright', 'peterson', 'barnes_meadow'),
     wdid       =  c("0303676", "0303679", "0303678", "0303677", "0303683")
   )
-  
+
   # daily diversions
   div <- cdssr::get_structures_divrec_ts(
     wdid          = res_structures$wdid,
@@ -647,6 +653,92 @@ calc_boatable <- function(df) {
   
   return(boat_df)
   
+}
+
+create_flow_plots <- function(df, save_path = NULL,  save_plots = TRUE) {
+  
+  sites <- unique(df$uid)
+  plots <- list()
+  
+  for (i in 1:length(sites)) {
+    
+    message("Plotting flow timeseries: ", sites[i], " - ", i, "/", length(sites))
+    
+    tmp <-
+      df %>%
+      dplyr::filter(uid == sites[i]) %>% 
+      dplyr::mutate(
+        month = lubridate::month(datetime),
+        year  = lubridate::year(datetime)
+      )
+    
+    if (unique(tmp$river) == "Cache La Poudre") {
+      # tmp
+      max_years <- c(2021, 2020)
+    } else {
+      
+      max_years <- c(max(tmp$year), max(tmp$year) - 1)
+    }
+    
+    tmp <-
+      tmp %>% 
+      # dplyr::filter(year %in% c(max(year), max(year) - 1)) %>% 
+      dplyr::filter(year %in% max_years) %>% 
+      tidyr::pivot_longer(cols = c(flow_preimp, flow_imp)) %>% 
+      dplyr::mutate(
+        value = dplyr::case_when(
+          value < 0 ~ 0,
+          TRUE     ~ value
+        ),
+        name = dplyr::case_when(
+          name == "flow_imp" ~ "Post",
+          name == "flow_preimp" ~ "Pre"
+        )
+      )
+    
+    plot <- 
+      tmp %>% 
+      ggplot2::ggplot() +
+      ggplot2::geom_line(ggplot2::aes(x = datetime, y = value, color = name), size = 1) +
+      ggplot2::labs(
+        title = "Pre/Post Implementation Flows",
+        subtitle = paste0("River: ", unique(tmp$river), " \nID: ", unique(tmp$uid)),
+        color = "Flow",
+        x = "", 
+        y = "Flow (CFS)"
+      ) +
+      ggplot2::scale_color_manual(values = c("red", "black")) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = 16),
+        plot.subtitle = ggplot2::element_text(size = 14),
+        axis.title = ggplot2::element_text(size = 10),
+        axis.text = ggplot2::element_text(size = 10),
+        legend.text = ggplot2::element_text(size = 10),
+        legend.title = ggplot2::element_text(size = 12, face = "bold")
+        # legend.justification=c(-12,-8),
+        # legend.position=c(0,0)
+      )
+    
+    if (save_plots) {
+      
+      plot_file <- paste0(save_path, "/", gsub(" ", "_", tolower(unique(tmp$river))), "_", unique(tmp$uid), "_flow.png")
+      message("Saving flow timeseries:\n", plot_file)
+      
+      ggplot2::ggsave(
+        plot_file, 
+        plot, 
+        width = 10, 
+        height = 6,
+        scale = 1
+        # dpi = 300
+      )
+    }
+    
+    plots[[i]] <- plot
+  }
+  
+  return(plots)
 }
 
 # *******************************************************************
