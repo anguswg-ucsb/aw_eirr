@@ -57,27 +57,3 @@ if(file.exists(mgmt_flow_path) & file.exists(boat_path)) {
 }
 
 rm(ark_mgmt, flow_df, poudre_mgmt, rf_mgmt, yampa_mgmt)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
